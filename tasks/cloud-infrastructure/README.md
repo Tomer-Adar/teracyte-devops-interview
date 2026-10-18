@@ -21,7 +21,7 @@ Turn the system's object storage into reviewable infrastructure code. No paid cl
 - Configure names, region and retention settings through variables. Include useful storage location outputs and example inputs without credentials. Identify external dependencies.
 - Declare Terraform and provider version constraints and commit `.terraform.lock.hcl`. Keep state, downloaded providers, secrets and saved plans out of Git.
 - Briefly explain credentials, secure shared state and locking in production, and what lifecycle expiration or `terraform destroy` would delete.
-- Run formatting and validation locally. Cloud credentials, `plan` and `apply` are not required.
+- Run formatting and validation locally and in the Dev [CI workflow](../ci-workflows/README.md). Cloud credentials, `plan` and `apply` are not required.
 
 ## Suggested starting point
 
