@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored values only - no credentials here; auth comes from `az login` or OIDC).
+name_prefix      = "teracyteexp"
+location         = "westeurope"
+replication_type = "LRS"
+raw_hot_days     = 7
+raw_delete_days  = 30
+mask_delete_days = 30

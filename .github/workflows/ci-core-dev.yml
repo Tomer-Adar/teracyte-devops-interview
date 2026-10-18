@@ -1,0 +1,100 @@
+# Dev delivery: API, Celery, production analysis steps, runtime, monitoring config and Terraform storage.
+# Shared paths (requirements-local.txt, tests/) also trigger ci-data-ml.yml.
+name: ci-core-dev
+
+on:
+  push:
+    branches: [main]
+    paths: &dev-paths
+      - services/**
+      - pipelines/**
+      - scripts/**
+      - tests/**
+      - infra/**
+      - observability/**
+      - Dockerfile
+      - .dockerignore
+      - compose.yaml
+      - requirements-local.txt
+      - .github/workflows/ci-core-dev.yml
+  pull_request:
+    paths: *dev-paths
+
+permissions:
+  contents: read
+
+# Explicit bash adds -o pipefail, so `cmd | tee log` still fails the step when cmd fails.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - run: python -m pip install -r requirements-local.txt
+      - run: python -m pytest -q
+
+  e2e:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start services
+        run: docker compose up -d --build --wait
+      - name: Analysis + end-to-end verification
+        run: docker compose run --rm verify | tee e2e-verify.log
+      - name: API results and Celery export
+        run: |
+          docker compose run --rm analysis --experiment-id ci-api
+          curl -fsS http://127.0.0.1:8000/experiments/ci-api/results | tee api-results.json
+          curl -fsS -X POST http://127.0.0.1:8000/experiments/ci-api/exports
+          for _ in $(seq 1 20); do docker compose exec -T worker test -s data/objects/reports/ci-api.json && break; sleep 1; done
+          docker compose exec -T worker cat data/objects/reports/ci-api.json
+      - name: Collect logs
+        if: always()
+        run: docker compose logs --no-color > compose.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-logs
+          path: |
+            e2e-verify.log
+            api-results.json
+            compose.log
+      - if: always()
+        run: docker compose down -v
+
+  monitoring-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool check config and rules
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/observability/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v3.13.3 check config /etc/prometheus/prometheus.yml
+      - name: Compose file (all profiles) is valid
+        run: docker compose --profile observability --profile jobs config -q
+      - name: Dashboards are valid JSON
+        run: for f in observability/grafana/dashboards/*.json; do jq empty "$f"; done
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate

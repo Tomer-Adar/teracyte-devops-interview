@@ -19,12 +19,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the starter pipeline locally")
     parser.add_argument("--experiment-id", default="demo-local")
+    parser.add_argument("--model-path", default=os.getenv("MODEL_PATH") or None,
+                        help="Selected model artifact (env MODEL_PATH); defaults to the generated mock weights")
     args = parser.parse_args()
     data_dir = ROOT / "data"
     manifest_path = data_dir / "manifest.json"
     if not manifest_path.exists():
         generate_data(data_dir)
     manifest = json.loads(manifest_path.read_text())
+    model_path = args.model_path or manifest["model_path"]
     mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27018")
     with MongoClient(mongo_url) as mongo:
         mongo["experiments"]["experiments"].update_one(
@@ -47,7 +50,7 @@ def main() -> None:
         subprocess.run([
             sys.executable, "-m", "pipelines.steps.ml_infer.run", "--experiment-id", args.experiment_id,
             "--image-id", image_id, "--image-path", str(image_path),
-            "--preprocess", str(preprocess), "--model-path", manifest["model_path"],
+            "--preprocess", str(preprocess), "--model-path", model_path,
             "--output", str(image_work / "inference.json"),
         ], cwd=ROOT, check=True)
     subprocess.run([

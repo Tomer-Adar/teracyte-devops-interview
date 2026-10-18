@@ -1,3 +1,18 @@
+x-app: &app
+  build: .
+  image: teracyte-starter:local
+  environment: &app-env
+    POSTGRES_URL: postgresql://starter:starter@postgres:5432/experiments
+    MONGO_URL: mongodb://mongo:27017
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/1
+  volumes:
+    - app-data:/app/data
+  depends_on:
+    postgres: {condition: service_healthy}
+    mongo: {condition: service_healthy}
+    redis: {condition: service_healthy}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,3 +45,121 @@ services:
       interval: 2s
       timeout: 2s
       retries: 30
+
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    <<: *app
+    # -E: emit task events so the Celery exporter can report workers and task outcomes.
+    command: ["python", "-m", "celery", "-A", "services.api.tasks.celery_app", "worker", "--loglevel=INFO", "-E"]
+
+  # One-shot jobs: `docker compose run --rm analysis --experiment-id X`
+  analysis:
+    <<: *app
+    profiles: ["jobs"]
+    environment:
+      <<: *app-env
+      MODEL_PATH: ${MODEL_PATH:-}
+    entrypoint: ["python", "-m", "scripts.run_local"]
+    command: []
+    # Measured cgroup memory.peak for the 5-image fixture run: 254 MiB (EVIDENCE.md). ~2x headroom.
+    mem_limit: 512m
+
+  verify:
+    <<: *app
+    profiles: ["jobs"]
+    environment:
+      <<: *app-env
+      MODEL_PATH: ${MODEL_PATH:-}
+      EXPECTED_MODEL_SHA256: ${EXPECTED_MODEL_SHA256:-}
+    entrypoint: ["python", "-m", "tests.e2e_verify"]
+    command: []
+
+  # --- Observability (opt-in): docker compose --profile observability up -d --wait
+  prometheus:
+    image: prom/prometheus:v3.13.3
+    profiles: ["observability"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  grafana:
+    image: grafana/grafana:13.1.8
+    profiles: ["observability"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}  # local only
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      prometheus: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    profiles: ["observability"]
+
+  celery-exporter:
+    image: danihodovic/celery-exporter:0.12.2
+    profiles: ["observability"]
+    command: ["--broker-url=redis://redis:6379/0", "--default-queue-name=celery"]
+    depends_on:
+      redis: {condition: service_healthy}
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.3
+    profiles: ["observability"]
+    privileged: true
+    command: ["--docker_only=true", "--housekeeping_interval=5s", "--store_container_labels=true"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    devices:
+      - /dev/kmsg
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    profiles: ["observability"]
+    environment:
+      DATA_SOURCE_NAME: postgresql://starter:starter@postgres:5432/experiments?sslmode=disable
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.53.0
+    profiles: ["observability"]
+    command: ["--mongodb.uri=mongodb://mongo:27017", "--compatible-mode"]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.92.1
+    profiles: ["observability"]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+
+volumes:
+  app-data:
+  prometheus-data:

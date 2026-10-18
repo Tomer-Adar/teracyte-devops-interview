@@ -1,0 +1,41 @@
+groups:
+  - name: experiment-platform
+    rules:
+      - alert: ApiDown
+        expr: probe_success{job="api"} == 0
+        for: 30s
+        labels: {severity: page}
+        annotations:
+          summary: "API health probe failing for 30s"
+
+      # Exports are queued but no worker consumes them: users wait forever for reports.
+      - alert: ExportQueueStuck
+        expr: max(celery_queue_length{queue_name="celery"}) > 0 and on() (sum(celery_worker_up) or vector(0)) == 0
+        for: 30s
+        labels: {severity: page}
+        annotations:
+          summary: "{{ $value }} export task(s) queued with no live Celery worker"
+
+      - alert: DependencyDown
+        expr: pg_up == 0 or mongodb_up == 0 or redis_up == 0
+        for: 30s
+        labels: {severity: page}
+        annotations:
+          summary: "{{ $labels.job }} is unreachable from its exporter"
+
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 1m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Prometheus cannot scrape {{ $labels.job }}"
+
+      # Preprocessing's known memory bottleneck. A ~7 s run can peak between scrapes, so this only
+      # catches sustained pressure; the OOM kill itself surfaces as the run's nonzero exit (137).
+      - alert: AnalysisMemoryNearLimit
+        expr: |
+          max(container_memory_working_set_bytes{container_label_com_docker_compose_service="analysis"}
+            / container_spec_memory_limit_bytes{container_label_com_docker_compose_service="analysis"}) > 0.8
+        labels: {severity: ticket}
+        annotations:
+          summary: "Analysis container above 80% of its memory limit"
