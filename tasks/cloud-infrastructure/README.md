@@ -1,37 +1,55 @@
 # Implement storage with Terraform
 
-**Required task — configuration and validation only** · [Assignment](../../README.md)
+**Required task — configuration and validation only** · [Assignment](../../README.md) · Time guide: ~1–1.5 h
 
 ## Goal
 
-Turn the system's object storage into reviewable infrastructure code. No paid cloud account or Kubernetes experience is needed.
+Define the system's object storage as reviewable infrastructure code, with retention rules that keep storage costs down. You do not need a cloud account: the configuration is validated, not deployed.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Terraform configuration | `infra/*.tf` |
+| Provider lock file | `infra/.terraform.lock.hcl` (committed) |
+| Example inputs, without credentials | `infra/terraform.tfvars.example` |
+| Validation output, the storage mapping table, and the notes below | EVIDENCE.md, section "Terraform"; notes may go in ARCHITECTURE_AND_DECISIONS.md |
 
 ## Requirements
 
-- Add Terraform under `infra/` using your chosen cloud provider. Define private object storage for raw images, masks and model artifacts, separated by containers/buckets or prefixes. Disable public access.
-- Implement this retention policy:
+1. Use one cloud provider of your choice (Azure, AWS or GCP).
+2. Define private object storage with three separate locations: **raw images**, **masks** and **model artifacts**. They can be separate containers/buckets, or prefixes in one, your choice.
+3. Public/anonymous access must be disabled.
+4. Implement exactly this retention policy:
 
-  | Data | Policy |
-  |---|---|
-  | Raw images | Hot (standard) tier for 7 days, then a cool/infrequent-access tier, deleted after 30 days |
-  | Masks | Hot for 30 days, then deleted |
-  | Model artifacts | Never expired by these rules |
+   | Location | Rule |
+   |---|---|
+   | Raw images | Standard (hot) tier for the first 7 days; move to the provider's cool/infrequent-access tier on day 7; delete on day 30 |
+   | Masks | Stay in the standard tier; delete on day 30 |
+   | Model artifacts | No expiry and no tier change |
 
-- Explain any provider minimum-storage-duration charges or lifecycle timing rules that affect this policy on your chosen cloud.
-- Configure names, region and retention settings through variables. Include useful storage location outputs and example inputs without credentials. Identify external dependencies.
-- Declare Terraform and provider version constraints and commit `.terraform.lock.hcl`. Keep state, downloaded providers, secrets and saved plans out of Git.
-- Briefly explain credentials, secure shared state and locking in production, and what lifecycle expiration or `terraform destroy` would delete.
-- Run formatting and validation locally and in the Dev [CI workflow](../ci-workflows/README.md). Cloud credentials, `plan` and `apply` are not required.
+   If your provider does not allow a move to its cool tier on day 7, use the closest allowed tier or day, and explain the difference in note 4 (requirement 9).
 
-## Suggested starting point
+5. These must be input variables:
+   - a name prefix (no default; set it in `terraform.tfvars.example`)
+   - the region (no default; set it in `terraform.tfvars.example`)
+   - the raw-images tier-change day (default `7`)
+   - the raw-images delete day (default `30`)
+   - the masks delete day (default `30`)
+6. These must be outputs:
+   - the storage account or bucket name(s)
+   - the address or URL of each of the three locations
+7. Declare a `required_version` for Terraform and a version constraint for the provider. Commit `.terraform.lock.hcl`.
+8. Configure no backend (local state only), and keep `*.tfstate`, `.terraform/` and saved plans out of Git.
+9. Write short notes (at most 10 lines in total) covering:
+   - how credentials would be supplied in production, with none in code
+   - where shared state would live and how it would be locked
+   - what the lifecycle rules delete, and what `terraform destroy` would delete
+   - any minimum-storage-duration charge or lifecycle timing rule your provider applies to this policy
 
-Use the provider you know and implement storage only. A full network, cluster, database estate or remote-state backend implementation is unnecessary. Keep model retention separate from short-lived image retention.
+## Done when
 
-Provider downloads need internet access. Initializing without a backend avoids connecting to remote state; validation does not verify cloud permissions, quotas, pricing or successful deployment.
-
-## How to demonstrate it
-
-From `infra/`, record these commands and their output in EVIDENCE.md:
+From `infra/`, these three commands exit 0:
 
 ```bash
 terraform fmt -check -recursive
@@ -39,8 +57,21 @@ terraform init -backend=false
 terraform validate
 ```
 
-Include example inputs and a short table mapping storage resources and lifecycle rules to raw images, masks and models. Document deployment and cleanup commands. Applying is not required; any optional deployment must use an account you are authorized to manage, with charges and cleanup documented. Disclose any validation blocked by network access instead of claiming it passed.
+- [ ] The retention rules match the table in requirement 4, including no rule on model artifacts.
+- [ ] `git ls-files infra` shows the lock file and no state files or `.terraform/` directory.
 
-## Optional improvements
+## Evidence to include in EVIDENCE.md
 
-A linter or policy scanner (for example tflint, trivy or checkov), a secure remote-state backend, or a plan/apply in an account you control. Describe any real deployment charges before running them.
+- The three commands and their output.
+- A table mapping each Terraform resource or rule to raw images, masks or models.
+- The deploy and clean-up commands you would use (`plan`/`apply`/`destroy` with your variable file). Running them is not required.
+
+## Not required
+
+- Running `terraform plan` or `apply`, or having a cloud account.
+- Networks, Kubernetes clusters, databases or a remote-state backend.
+
+## Hints (not graded)
+
+- `terraform init` downloads the provider and needs internet access. If it is blocked, say so instead of claiming validation passed.
+- Look up your provider's minimum storage duration for its cool tier before writing note 4.

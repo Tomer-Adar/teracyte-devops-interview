@@ -1,25 +1,52 @@
 # Write the cloud deployment plan
 
-**Bonus task — Compute** · [Assignment](../../README.md) · extends the cloud deployment discussion topic
+**Bonus task — Compute** · [Assignment](../../README.md) · extends the cloud deployment discussion topic · Time guide: ~1–1.5 h
 
 ## Goal
 
-Show practical cloud judgment for Dev's serving and analysis workloads and Data/ML's notebooks, training and model development, in writing, before the interview.
+Put your cloud placement in writing before the interview: where each workload runs, which capacity type it uses and why, and how we could move to another provider. We will discuss costs in the interview; **no cost calculation is needed here**.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| The plan, at most one page | ARCHITECTURE_AND_DECISIONS.md, section "Cloud deployment plan" |
 
 ## Requirements
 
-If you choose this task, add to ARCHITECTURE_AND_DECISIONS.md:
-- One diagram or table placing the API, worker and broker, production batch analysis, notebook users, training workers, PostgreSQL, MongoDB, datasets and model artifacts. Choose Azure, AWS, GCP or a provider-neutral design.
-- Which workloads need reliable capacity, and which could use Spot/interruptible capacity or scale to zero, and why.
-- Short notes on GPU utilization, idle-notebook shutdown and checkpointing interrupted training.
-- A migration outline for analysis, training and storage: configuration and credentials, data transfer, verification and rollback. Name the provider dependencies that remain and how you keep interfaces open (no proprietary ML or storage SDK calls in business logic).
+1. Choose one target: Azure, AWS, GCP or a provider-neutral design.
+2. Include a table with exactly these 9 rows and these 3 columns:
 
-**No cost calculation is needed.** We will discuss cost trade-offs in the interview, using your plan as the starting point.
+   | Component | Service you would use | Capacity type (reliable / Spot / scale-to-zero) and why |
+   |---|---|---|
+   | API | | |
+   | Celery worker | | |
+   | Broker (Redis) | | |
+   | Production batch analysis | | |
+   | Notebook users | | |
+   | Training jobs | | |
+   | PostgreSQL | | |
+   | MongoDB | | |
+   | Images, masks and model artifacts | | |
 
-## Suggested starting point
+3. Add a diagram of how these components connect. A diagram-as-code block or an image file is fine.
+4. In at most 5 lines, explain how you would:
+   - keep GPUs busy
+   - shut down idle notebooks
+   - limit the work lost when a Spot training job is interrupted
+5. Write a migration outline to another provider in four labelled steps: **configuration and credentials**, **data transfer**, **verification**, **rollback**.
+6. List the provider-specific parts that remain, and how application code avoids them. Application code must not call proprietary ML or storage SDKs directly.
 
-Build on your Terraform storage design and the observability you added: what you measured locally (for example the analysis container's memory) is good input for sizing.
+## Done when
 
-## How to demonstrate it
+- [ ] All 9 rows are filled and every capacity type has a reason.
+- [ ] The diagram, the GPU/notebook/checkpoint notes and the 4-step migration outline are present.
+- [ ] It fits on one page.
 
-The diagram or table and the short notes in ARCHITECTURE_AND_DECISIONS.md. Keep it to about one page.
+## Evidence to include in EVIDENCE.md
+
+- A one-line pointer to the section in ARCHITECTURE_AND_DECISIONS.md.
+
+## Not required
+
+- Prices or cost calculations, deployment, or Terraform beyond the required storage task.

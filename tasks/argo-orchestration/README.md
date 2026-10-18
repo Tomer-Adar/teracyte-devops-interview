@@ -1,29 +1,46 @@
-# Add Argo as the analysis workflow orchestrator
+# Add Argo orchestration
 
-**Bonus task — Compute** · [Assignment](../../README.md)
+**Bonus task — Compute** · [Assignment](../../README.md) · Time guide: ~4–6 h
 
 ## Goal
 
-Run Dev's existing production analysis steps as a visible, repeatable Kubernetes workflow. Data/ML training infrastructure is a separate optional task.
+Run Dev's existing analysis steps as a visible, repeatable workflow on Kubernetes, with Argo Workflows as the orchestrator.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| A local cluster + Argo setup script or commands | Your repository |
+| Workflow template | `workflow-template.yaml` |
+| Demonstration | EVIDENCE.md, section "Bonus: Argo" |
 
 ## Requirements
 
-If you choose this task:
-- Add reproducible local Kubernetes and Argo setup. Kind/k3d is sufficient. Provisioning Kubernetes with Terraform or deploying it to the cloud is optional; the required Terraform task covers storage only. Compose may host supporting services, but Argo itself requires Kubernetes.
-- Integrate the existing preprocess, inference and database-update commands with container inputs, outputs and database configuration.
-- Add workflow-template.yaml accepting an experiment ID and image IDs. Preserve the image → mask → inference dependency and complete database aggregation only after the expected results exist.
-- Add basic workflow monitoring: make terminal status, duration and failed-step logs accessible through a documented command or UI. Include resource requests/limits and bounded retries.
+1. One documented command or script must create a local Kubernetes cluster (kind or k3d) and install Argo Workflows at a pinned version.
+2. `workflow-template.yaml` must take two parameters, `experiment-id` and `image-ids`.
+3. The workflow must run the existing commands: `pipelines.steps.preprocess.run`, then `pipelines.steps.ml_infer.run` for each image, then `pipelines.steps.db_update.run` once, only after every image's inference has finished.
+4. Database connections must come from the same environment variables as in Compose, supplied through Kubernetes configuration, not hardcoded.
+5. Every step must have CPU and memory requests and limits, and a retry limit of at most 2.
+6. PostgreSQL, MongoDB and Redis may stay in Compose or run in the cluster. Steps must reach them either way.
+7. One documented command or UI path must show a workflow's final status, its duration, and the logs of any failed step.
 
-## Suggested starting point
+## Done when
 
-First run a simple sequential workflow using the same fixtures and verifier as the required tasks. A shared local volume is acceptable for an initial implementation if its scheduling limitations are documented.
+- [ ] Submitting the template for a new experiment with `image-001`…`image-005` ends in `Succeeded`.
+- [ ] Your verifier's checks pass for that experiment: 5 rows, `COMPLETED`, correct digest.
+- [ ] The status/duration/log command works on a deliberately failed run.
 
-If you use Argo's S3 artifact repository, MinIO is suitable locally. Do not attempt to revive the removed MinIO Azure gateway. An in-cluster MinIO service is portable object storage in its own right.
+## Evidence to include in EVIDENCE.md
 
-## How to demonstrate it
+- The setup and submit commands.
+- The final status and duration.
+- The log output of one failed step.
+- The verification of the experiment.
 
-Provide setup/submission commands, workflow YAML, one successful workflow's status/duration and access to its step logs. Run the database verifier against that experiment.
+## Not required
 
-## Optional improvements
+- Cloud Kubernetes, an artifact repository, or a monitoring stack for the cluster.
 
-Fan out across images and fan in to a bounded aggregation step. Add artifact storage, dashboards, alerts or resource profiling. Explain how short-lived Pods can disappear between monitoring scrapes. A full monitoring stack is not necessary for the basic optional task.
+## Hints (not graded)
+
+- A shared volume between steps is the simplest start. Note its scheduling limits if you use one.

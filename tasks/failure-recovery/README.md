@@ -1,29 +1,38 @@
-# Demonstrate failure recovery
+# Demonstrate failure recovery across PostgreSQL and MongoDB
 
-**Bonus task — Storage** · [Assignment](../../README.md)
+**Bonus task — Storage** · [Assignment](../../README.md) · Time guide: ~1.5–2 h
 
 ## Goal
 
-Recover from interruptions without duplicate results or misleading completion state.
+An interrupted analysis must never leave duplicate results or a false "completed" status. A retry must always reach a correct final state.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| A reproducible way to interrupt the run at a chosen point | A script, environment flag or documented command in your repository |
+| Demonstration and explanation | EVIDENCE.md, section "Bonus: failure recovery" |
 
 ## Requirements
 
-If you choose this task:
-- Inject a controlled process/container interruption during analysis or database aggregation.
-- Demonstrate safe retry without duplicate PostgreSQL rows or false MongoDB completion.
-- Show how completed inference output can be reused safely, accounting for image and model identity.
-- Explain Celery export retries and what prevents conflicting or incomplete reports.
+1. Interrupt the analysis **after PostgreSQL has committed the result rows and before MongoDB is marked `COMPLETED`**. This is the gap in `pipelines/steps/db_update/run.py`.
+2. Make the interruption reproducible, with the same point every time, for example a fault-injection environment variable or a kill at a known log line.
+3. Show the intermediate state: the PostgreSQL row count and the MongoDB status, right after the interruption.
+4. Retry the same experiment ID. The final state must be exactly 5 PostgreSQL rows and MongoDB `COMPLETED` with `result_count = 5`. Your verifier must pass.
+5. Explain, in at most 5 lines, when an existing inference output (`inference.json`) may be reused on retry and when it must be recomputed, based on image identity and model digest.
+6. Explain, in at most 5 lines, what happens if a Celery export task is retried or runs while the experiment is incomplete.
 
-## Suggested starting point
+## Done when
 
-Use the local runner and a process kill; Kubernetes and real Spot eviction are unnecessary. Inspect the existing upsert key and the gap between PostgreSQL commit and MongoDB update.
+- [ ] The interruption reproduces at the same point on two attempts.
+- [ ] The intermediate state shows rows present but status not `COMPLETED`.
+- [ ] After the retry: 5 rows, no duplicates, `COMPLETED`, verifier `PASS`.
 
-Choose one failure boundary and make it reproducible. Existing upserts help with duplicate rows, but do not by themselves prove recovery across both databases.
+## Evidence to include in EVIDENCE.md
 
-## How to demonstrate it
+- The interruption command, the intermediate-state queries and output, the retry command, and the final verifier output.
+- The two explanations from requirements 5 and 6.
 
-Record the failure, intermediate state, retry and final verification. Explain when cached/completed output is valid and when it must be recomputed.
+## Not required
 
-## Optional improvements
-
-Test additional failure boundaries, real Spot eviction, automatic resume, concurrent runs or an explicit reconciliation mechanism.
+- Kubernetes, real Spot evictions, or automatic resume.

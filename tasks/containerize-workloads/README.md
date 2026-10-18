@@ -1,28 +1,66 @@
 # Containerize the workloads
 
-**Required task** · [Assignment](../../README.md) · [Starter guide](../../docs/local-development.md)
+**Required task** · [Assignment](../../README.md) · [Starter guide](../../docs/local-development.md) · Time guide: ~1–1.5 h
 
 ## Goal
 
-Give Dev a repeatable runtime for its application and production analysis.
+Dev needs one repeatable way to run its API, worker and analysis pipeline, the same on every laptop and in CI.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Dockerfile(s) | Repository root or next to each service (your choice) |
+| `.dockerignore` | Repository root |
+| Compose services for the API, worker and analysis | `compose.yaml` (extend the supplied file) |
+| The 4 commands below, with their output | EVIDENCE.md, section "Containerize" |
 
 ## Requirements
 
-- Add Dockerfile(s) and extend Compose to run FastAPI, the Celery worker and the existing analysis runner with the supplied databases and Redis.
-- One shared image with different commands is acceptable. A one-shot analysis container and sequential step execution are sufficient.
-- Configure database/broker addresses through environment variables. Keep generated data and model weights in mounted storage, outside image layers; exclude them and secrets from the build context.
-- Document startup, analysis and shutdown commands. Ensure dependencies are ready before analysis starts and analysis failures produce a nonzero exit code.
+1. Compose must run three workloads using your image(s):
+   - **API:** `uvicorn services.api.main:app`, reachable at `http://localhost:8000`.
+   - **Worker:** the Celery worker `celery -A services.api.tasks.celery_app worker`.
+   - **Analysis:** `python -m scripts.run_local --experiment-id <id>` as a **one-shot** container. It must not start with `docker compose up`. It is started on demand with `docker compose run --rm <analysis service> --experiment-id <id>`, runs once, then exits. Experiment IDs may contain only letters, digits, `_` and `-`, because the API rejects anything else.
+2. One shared image with different commands is allowed. So are separate images. Your choice.
+3. Every workload must get its database and broker connections from these environment variables, which the code already reads:
+   - `POSTGRES_URL`
+   - `MONGO_URL`
+   - `CELERY_BROKER_URL`
+   - `CELERY_RESULT_BACKEND`
 
-## Suggested starting point
+   Set all four explicitly in Compose, using the service names and internal ports: `postgres:5432`, `mongo:27017`, `redis:6379`. You do not need to remove the code's built-in `localhost` defaults.
+4. The model file used by the analysis must be selectable with an environment variable named `MODEL_PATH`, without rebuilding the image. `MODEL_PATH` is a path **inside the container**, typically a file in the shared data volume. You may edit `scripts/run_local.py` to read `MODEL_PATH`; today it always uses the path in `data/manifest.json`. When `MODEL_PATH` is unset, the generated mock model is used, as now.
+5. Generated data (`data/`) must live in a Docker volume or bind mount that the API, worker and analysis share. It must be writable by the user the containers run as. Data and model files must not be inside any image. All three workloads must run with the same working directory, the directory that contains the repository code, and the shared storage must be mounted at `data/` inside it. The API and worker use the relative paths `data/objects/raw` and `data/objects/reports`.
+6. `.dockerignore` must exclude at least `data/`, `.env`, `.git` and `.venv`.
+7. The analysis must start only after PostgreSQL, MongoDB and Redis report healthy.
+8. If any analysis step fails, the analysis container must exit with a nonzero code.
+9. The API must have a Compose healthcheck that passes when `GET /openapi.json` returns HTTP 200. FastAPI serves this path already.
 
-Use requirements-local.txt and the commands in the starter guide. Inside containers, localhost refers to that container; use service names for dependencies. Share the required data paths between the runner, API and worker and ensure they are writable.
+## Done when
 
-Select the model artifact through configuration (the inference step already accepts `--model-path`), so a different model can be used without rebuilding the image. How models are delivered is an interview discussion topic.
+Reviewers run these from a fresh clone, using the exact commands you document:
 
-## How to demonstrate it
+- [ ] **Build + start:** one command builds the images and starts the databases, Redis, the API and the worker. Every service with a healthcheck reports healthy, and the worker is running.
+- [ ] **Analysis:** one command runs the analysis for a new experiment ID and exits 0. The first run generates the five fixture images.
+- [ ] **Results + export:** `curl http://localhost:8000/experiments/<id>/results` returns status `COMPLETED` with 5 results. `curl -X POST http://localhost:8000/experiments/<id>/exports` returns `QUEUED`, and the worker writes `data/objects/reports/<id>.json`.
+- [ ] **Stop:** one command stops everything. Say whether it also deletes data.
+- [ ] `docker history <image>` shows no `data/` or model files.
+- [ ] **Model selection:** copy another file into the data volume (for example the toy model's `model.json`), run the analysis with `MODEL_PATH` pointing to it, and the result rows show that file's SHA-256.
 
-From a clean checkout, show the commands to build and start services, generate fixtures and complete one analysis run. Show the API returning its results and a queued Celery export producing a report. Record these in EVIDENCE.md.
+## Evidence to include in EVIDENCE.md
 
-## Optional improvements
+- The 4 commands (build + start, analysis, results/export, stop) and their output.
+- How you read the report file (for example `docker compose exec worker cat data/objects/reports/<id>.json`).
+- The model-selection run: the command with `MODEL_PATH`, the file's SHA-256 (`sha256sum`), and the matching `model_sha256` in the results.
 
-Run as a non-root user, reduce image size, pin dependencies, add health checks, or measure resource use and set limits. Separate optimized step images are welcome but not required.
+## Not required
+
+- Kubernetes, multiple environments, a container registry, or pushing images.
+- Changing the analysis algorithm. Running the three steps in sequence inside one container is expected.
+- Image-size or startup-time optimization.
+
+## Hints (not graded)
+
+- Inside a container, `localhost` is that container, not the database.
+- `depends_on` with `condition: service_healthy` handles requirement 7.
+- Non-root users, a worker healthcheck and pinned dependency versions all count as good practice in review.

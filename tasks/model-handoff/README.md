@@ -1,26 +1,59 @@
 # Implement the model handoff
 
-**Bonus task — MLOps** · [Assignment](../../README.md) · also a required interview discussion topic
+**Bonus task — MLOps** · [Assignment](../../README.md) · also a required interview discussion topic · Time guide: ~2–3 h
 
 ## Goal
 
-Turn the notebook → model discussion into a working local handoff: Data/ML publishes a model, a gate decides whether it may be used, and Dev's analysis consumes the selected version through configuration.
+Data/ML must be able to hand a trained model to Dev safely. A model may only be used in production after it passes a check, using it is an explicit decision, and going back to the previous model takes one command.
+
+**Terms.** A *candidate* is a trained model that has not been checked yet. To *publish* is to store a checked candidate as an immutable, versioned release. To *promote* is to select a published release for production analysis. To *roll back* is to promote the previous release again.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Publish, promote and roll-back commands, using a tool of your choice | Your repository; commands documented in EVIDENCE.md |
+| The demonstration sequence below | EVIDENCE.md, section "Bonus: model handoff" |
 
 ## Requirements
 
-If you choose this task:
-- Train and evaluate the [supplied toy model](../../examples/model_lifecycle/README.md) and publish it with handoff metadata: artifact location, release version, expected digest, input/output expectations and evaluation results.
-- Gate the candidate **before** it can be selected: for example, an evaluation threshold, beating the baseline, and loading it with the supplied helper. Demonstrate one rejected handoff (a failed threshold or a digest mismatch). A digest assertion after the candidate has already been selected is not a gate.
-- Keep publication separate from selection: publishing a candidate must not change what production analysis uses. Make promotion explicit and show a rollback.
-- Make the selected version available to the existing analysis through configuration, and show its digest in the pipeline results.
-- Use established tools of your choice, such as a model registry, an object store with versioning, or OCI artifacts. Write code only as glue.
+1. Use an established tool for storing and versioning models (for example a model registry, an object store with versioning, or an artifact registry). Write your own code only as glue.
+2. Each published release must record:
+   - version
+   - artifact location
+   - SHA-256 digest of the model file
+   - input/output shape (input `(n, 2)`, output `(n,)`)
+   - the contents of `evaluation.json`
+   - the Git commit it was trained from
+3. Publishing must run this gate first and refuse the candidate if any check fails:
+   - `test_mse` ≤ `0.001`
+   - `test_mse` < `baseline_test_mse`
+   - the model loads with the supplied `load_model()` and `predict()` returns shape `(n,)` for an `(n, 2)` input
+4. Publishing must **not** change which model production uses.
+5. Promoting must check that the stored model's SHA-256 still equals the recorded digest, and refuse on a mismatch.
+6. The analysis must use the promoted model through configuration (for example `MODEL_PATH`), without rebuilding images.
+7. Production analysis must be able to tell which release it ran with: the `model_sha256` in the result rows must equal the promoted release's digest.
 
-## Suggested starting point
+## Done when
 
-The image-inference starter is a mock: it records the chosen artifact's digest but doesn't evaluate the regression model. Prove selection and integration through the image pipeline, and demonstrate the toy model's evaluation separately with the supplied helpers. Production accuracy is outside this exercise.
+The following sequence runs, with the output shown:
 
-Use open artifact formats and configurable locations. Training and consumption code must not depend on proprietary cloud ML APIs.
+- [ ] A candidate that fails the gate (for example with the threshold lowered to `0.0001`) is rejected, and nothing is published.
+- [ ] Publish v1 → promote v1 → run the analysis → result rows show v1's digest.
+- [ ] Publish v2 → production still uses v1 → promote v2 → run the analysis → rows show v2's digest.
+- [ ] Roll back to v1 → run the analysis → rows show v1's digest.
+- [ ] Changing a stored model file's bytes makes promotion fail with a digest mismatch.
 
-## How to demonstrate it
+## Evidence to include in EVIDENCE.md
 
-Include the training command, evaluation result, published artifact and metadata, the rejected handoff, a promotion and a rollback, and the selected digest in the pipeline results.
+- Every command in the sequence above, with its output.
+- The recorded metadata of one release.
+
+## Not required
+
+- A model-serving API, GPU training, or cloud deployment.
+- Changing the image-inference algorithm. The inference step only records the model's digest; it does not use the regression weights.
+
+## Hints (not graded)
+
+- The training CLI is `python -m examples.model_lifecycle.train --output-dir <dir>`. Changing the dataset seed in [train.py](../../examples/model_lifecycle/train.py) is one way to get a second, different model.

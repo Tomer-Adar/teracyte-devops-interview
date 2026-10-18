@@ -1,29 +1,50 @@
 # Implement a portable training and promotion platform
 
-**Bonus task — MLOps** · [Assignment](../../README.md) · [Model handoff bonus](../model-handoff/README.md)
+**Bonus task — MLOps** · [Assignment](../../README.md) · [Model handoff bonus](../model-handoff/README.md) · Time guide: ~4–6 h
 
 ## Goal
 
-Turn the Data team's notebook-to-model design into infrastructure they can use to train, compare and release models.
+Give Data/ML a self-service way to run training jobs, compare experiments and release models, on a laptop today and on cloud compute later, without code changes.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Tracking and registry service(s) | Your Compose setup |
+| Training job definition and submit command | Your repository; command documented in EVIDENCE.md |
+| Demonstration | EVIDENCE.md, section "Bonus: training platform" |
 
 ## Requirements
 
-If you choose this task:
-- Launch a reproducible training job from a notebook or command, with configurable CPU/GPU execution. Provide infrastructure configuration for cloud workers; an actual paid cloud run is optional.
-- Track dataset identity, parameters, code/environment version, metrics and artifacts so experiments and benchmarks can be compared.
-- Publish versioned models and automate evaluation gates, explicit promotion and rollback. Keep candidate publication separate from production selection.
-- Use open artifact formats, configurable endpoints and portable training containers. Provider-specific provisioning belongs at the infrastructure boundary; training and consumption code must not depend on proprietary cloud ML APIs.
+1. Use an established experiment-tracking and model-registry tool. Do not build one.
+2. One documented command must submit a training job that runs the supplied training code in a container.
+3. Every training run must record:
+   - a dataset identity (a seed or hash)
+   - parameters
+   - the Git commit
+   - metrics (`test_mse`, `baseline_test_mse`)
+   - the model artifact
+4. You must be able to compare at least two runs side by side, in the tool's UI or CLI.
+5. Registering a model must be separate from promoting it to production. Promotion must apply the [model handoff](../model-handoff/README.md) gate (requirement 3 there).
+6. Rolling back to the previous production model must take one command or action.
+7. CPU or GPU must be selectable with one setting. Running only on CPU locally is fine; document the GPU setting.
+8. No credentials in notebooks, code or Git. Endpoints and credentials come from environment variables or a secrets file excluded from Git.
+9. Training and model-loading code must not call proprietary cloud ML APIs.
 
-## Suggested starting point
+## Done when
 
-Extend the supplied example and, if you did it, the model handoff bonus. Use an established tracking and registry tool rather than building one, and justify your choice. Reuse existing databases/storage where appropriate rather than deploying a large platform for its own sake.
+- [ ] Two submitted runs (for example with different seeds) appear in the tracking tool with all fields from requirement 3.
+- [ ] A comparison of the two runs is shown.
+- [ ] One model is registered, promoted, a second one promoted, then rolled back.
+- [ ] `git grep` finds no credentials.
 
-Show how a notebook user submits a job and retrieves results without embedding credentials. Document runtime, data and artifact interfaces so the same job can move between cloud and on-prem compute. A dedicated serving API is optional; production analysis can load a published artifact.
+## Evidence to include in EVIDENCE.md
 
-## How to demonstrate it
+- The submit command and output.
+- A screenshot or CLI output of the run comparison.
+- The promote and roll-back commands and their results.
+- A short list: what ran locally, what is only configuration, and what is untested in the cloud.
 
-Record one submitted training run, an experiment comparison, model publication and a promotion/rollback sequence. Identify what ran locally, what was validated as infrastructure configuration and what remains untested in the cloud.
+## Not required
 
-## Optional improvements
-
-Add checkpoint recovery after preemption, model/data caching, quotas, idle-notebook shutdown, job cleanup, cost monitoring or multi-user access controls. Explain how these controls affect training cost and reproducibility.
+- An actual cloud or GPU run, multi-user access control, or a serving API.
