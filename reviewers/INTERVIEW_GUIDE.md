@@ -9,6 +9,7 @@ Target: mid-level DevOps engineer, about 6–8 hours of focused work with AI too
 1. Clone fresh. Run exactly the commands in the candidate's EVIDENCE.md. Most red flags show up here, before you read any code.
 2. Run their verifier with a wrong expected digest. It must exit nonzero.
 3. Start their monitoring, stop the worker (or the API), and watch whether their alert fires.
+   *Reviewer machine caveat:* container collectors such as cAdvisor lose container labels on a WSL distro that runs both native Docker and Docker Desktop's integration. If per-container panels are empty, re-check on a single-engine host before marking M3 down.
 4. Open their CI run links. A workflow that never ran is a partial pass at best.
 5. Only then read ARCHITECTURE_AND_DECISIONS.md and the code.
 
