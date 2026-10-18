@@ -51,7 +51,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/openapi.json')"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -80,6 +80,8 @@ services:
       <<: *app-env
       MODEL_PATH: ${MODEL_PATH:-}
       EXPECTED_MODEL_SHA256: ${EXPECTED_MODEL_SHA256:-}
+      E2E_TIMEOUT_SECONDS: ${E2E_TIMEOUT_SECONDS:-180}
+      E2E_EXPERIMENT_ID: ${E2E_EXPERIMENT_ID:-}
     entrypoint: ["python", "-m", "tests.e2e_verify"]
     command: []
 

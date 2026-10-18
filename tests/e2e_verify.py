@@ -37,7 +37,7 @@ def sha256_file(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--experiment-id", default=f"e2e-{uuid.uuid4().hex[:12]}")
+    parser.add_argument("--experiment-id", default=os.getenv("E2E_EXPERIMENT_ID") or f"e2e-{uuid.uuid4().hex[:12]}")
     parser.add_argument("--expected-sha256", default=os.getenv("EXPECTED_MODEL_SHA256") or None)
     parser.add_argument("--model-path", default=os.getenv("MODEL_PATH") or None)
     parser.add_argument("--timeout", type=float, default=float(os.getenv("E2E_TIMEOUT_SECONDS", "180")))
@@ -51,6 +51,9 @@ def main() -> int:
     if not (data_dir / "manifest.json").exists():
         generate_data(data_dir)
     model_path = Path(args.model_path or json.loads((data_dir / "manifest.json").read_text())["model_path"])
+    if not model_path.is_file():
+        print(f"FAIL: model file not found: {model_path}")
+        return 1
     expected_sha = args.expected_sha256 or sha256_file(model_path)
 
     # Remove stale state so an earlier run cannot satisfy the checks.

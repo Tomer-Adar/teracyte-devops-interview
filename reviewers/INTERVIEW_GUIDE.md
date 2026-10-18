@@ -14,6 +14,8 @@ Target: mid-level DevOps engineer, about 6–8 hours of focused work with AI too
 
 ## Rubric: required tasks
 
+The **Pass** bar for each task is its page's **Done when** checklist; cite failures by requirement number (for example "CI R7"). The columns below add what separates Strong from Pass, and the red flags.
+
 | Area | Pass | Strong | Red flag |
 |---|---|---|---|
 | Containers | API, worker and analysis run from a clean clone; connections via env | Non-root, healthchecks, data in volumes, `.dockerignore`, model path via config | Works only with an existing local `data/`; secrets or weights baked into the image |

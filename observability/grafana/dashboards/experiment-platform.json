@@ -140,7 +140,7 @@
             "uid": "prometheus"
           },
           "expr": "probe_duration_seconds{job=\"api\"}",
-          "legendFormat": "GET /docs"
+          "legendFormat": "GET /openapi.json"
         }
       ],
       "fieldConfig": {

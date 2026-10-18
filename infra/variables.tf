@@ -8,9 +8,8 @@ variable "name_prefix" {
 }
 
 variable "location" {
-  description = "Azure region."
+  description = "Azure region, e.g. westeurope."
   type        = string
-  default     = "westeurope"
 }
 
 variable "replication_type" {

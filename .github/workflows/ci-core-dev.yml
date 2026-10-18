@@ -15,7 +15,7 @@ on:
       - Dockerfile
       - .dockerignore
       - compose.yaml
-      - requirements-local.txt
+      - '**/requirements*.txt'
       - .github/workflows/ci-core-dev.yml
   pull_request:
     paths: *dev-paths

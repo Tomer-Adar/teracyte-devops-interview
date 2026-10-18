@@ -17,7 +17,7 @@ scrape_configs:
     params:
       module: [http_2xx]
     static_configs:
-      - targets: ["http://api:8000/docs"]
+      - targets: ["http://api:8000/openapi.json"]
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

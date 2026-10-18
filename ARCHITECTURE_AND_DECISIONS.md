@@ -13,7 +13,7 @@ flowchart LR
     V[verify one-shot] --> AN
   end
   subgraph obs[Compose profile: observability]
-    BB[blackbox-exporter] -->|GET /docs| API
+    BB[blackbox-exporter] -->|GET /openapi.json| API
     CE[celery-exporter] --> R
     CA[cAdvisor] -.->|cgroups| app
     PE[postgres-exporter] --> PG

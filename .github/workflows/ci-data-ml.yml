@@ -8,7 +8,7 @@ on:
     paths: &ml-paths
       - examples/model_lifecycle/**
       - tests/test_model_lifecycle.py
-      - requirements-local.txt
+      - '**/requirements*.txt'
       - .github/workflows/ci-data-ml.yml
   pull_request:
     paths: *ml-paths
