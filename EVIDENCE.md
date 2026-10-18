@@ -109,7 +109,7 @@ The analysis run lasts about 7 s, so 5 s scrapes and 5 s cAdvisor housekeeping m
 - Re-ran the analysis under the limit: `{"experiment_id": "limit-check", … "status": "COMPLETED"}`, exit 0.
 - Changed the memory alert to "above 80% of limit". It only catches sustained pressure; an OOM kill shows as exit 137 and a failed verification.
 
-## 4. CI (reference for the interview discussion)
+## 4. CI workflows (required)
 
 `actionlint` passes on both workflows (exit 0). The Data/ML gate was replayed locally:
 
