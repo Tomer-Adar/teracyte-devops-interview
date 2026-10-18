@@ -44,7 +44,7 @@ The format is a schema identifier, not a model release version. A release would 
 
 ## Interview discussion
 
-The fixture does not publish artifacts, compare release candidates against an approval threshold, choose production versions, verify release digests or roll back a release. **You do not need to implement any of this.** Be ready to discuss in the interview how you would do it, and with which tools: where artifacts live, how versions and digests are recorded, what gate a candidate must pass before it can be selected, how Dev's analysis picks a version, and how to roll back.
+The fixture does not publish artifacts, compare release candidates against an approval threshold, choose production versions, verify release digests or roll back a release. **You do not need to implement any of this** unless you choose the [model handoff bonus](../../tasks/model-handoff/README.md). Be ready to discuss in the interview how you would do it, and with which tools: where artifacts live, how versions and digests are recorded, what gate a candidate must pass before it can be selected, how Dev's analysis picks a version, and how to roll back.
 
 The existing image-inference step reads any nonempty artifact and records its SHA-256, but it computes mask-based mock metrics without evaluating these regression weights. Do not claim that a successful image-pipeline run validates this model's production accuracy. No change to the camera-image algorithm is required.
 

@@ -1,6 +1,6 @@
 # Add portable object storage and model caching
 
-**Optional task** · [Assignment](../../README.md)
+**Bonus task** · [Assignment](../../README.md)
 
 ## Goal
 

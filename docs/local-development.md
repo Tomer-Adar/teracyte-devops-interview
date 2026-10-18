@@ -89,7 +89,7 @@ The [supplied notebook and equivalent CLI](../examples/model_lifecycle/README.md
 python -m examples.model_lifecycle.train --output-dir data/model-lifecycle
 ~~~
 
-This produces model.json and evaluation.json. The helpers supply training, benchmarking against a baseline, loading and prediction. How a trained model is published, gated, selected and rolled back is a required interview discussion topic; no implementation is needed. Jupyter is optional; the CLI uses the same helpers as the notebook.
+This produces model.json and evaluation.json. The helpers supply training, benchmarking against a baseline, loading and prediction. How a trained model is published, gated, selected and rolled back is a required interview discussion topic; implementing it is an optional bonus. Jupyter is optional; the CLI uses the same helpers as the notebook.
 
 The image-inference mock can read this artifact and report its SHA-256, but its mask metrics do not evaluate the regression weights. Use the supplied model evaluation separately; do not claim production accuracy from the pipeline's completion status.
 
