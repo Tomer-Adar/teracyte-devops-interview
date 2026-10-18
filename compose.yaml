@@ -1,3 +1,6 @@
+# Fixed project name: dashboards and alerts filter on it, so it must not depend on the clone directory.
+name: teracyte-devops-interview
+
 x-app: &app
   build: .
   image: teracyte-starter:local
