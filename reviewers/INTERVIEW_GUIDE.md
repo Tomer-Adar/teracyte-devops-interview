@@ -21,6 +21,7 @@ Target: mid-level DevOps engineer, about 6–8 hours of focused work with AI too
 | Observability | Metrics stack in Compose; dashboard and alert provisioned as code; alert fires and resolves | Exporters/probes instead of app changes; notices short-lived containers are missed between scrapes; sizing backed by a measurement | Dashboard built by clicking (not in Git); alert never shown firing; `latest` image tags |
 | CI workflows | Two workflows, path-filtered by team; Dev runs E2E verify and Terraform validate; failures fail the job | Ran on GitHub with a deliberately failing run; logs uploaded on failure; pipefail; training-only change doesn't rebuild the API; model gate uses existing tools (e.g. `jq` on `evaluation.json`) | Never ran; `continue-on-error`; CI-only scripts that differ from local commands; cloud credentials in YAML |
 | Terraform | fmt, init, validate pass (also in CI); private storage; lifecycle as specified | Models excluded from expiry; versioning; shared keys off; names what `destroy` deletes; provider minimum-duration rules | State or `.terraform/` committed; public access; credentials in tfvars |
+| Tool use (all tasks) | Tools chosen for the job, with a one-line reason each | Established tools for registry, orchestration, monitoring, scanning; can say why an alternative was rejected | Custom scripts re-implementing a registry, monitoring, scheduler or backup tool; no reason given |
 | Honesty | Limits labelled | One real issue, with how the fix was verified | Claims that cannot be reproduced |
 
 ## Traps that unverified AI output falls into
@@ -84,7 +85,7 @@ Reference: [ci-core-dev.yml](../.github/workflows/ci-core-dev.yml) and [ci-data-
 | MongoDB | MongoDB Atlas on Azure (real wire protocol, portable), **not** Cosmos DB-specific APIs | Reliable |
 | Images, models | Blob (the candidate's Terraform) | Lifecycle for images; none for models |
 
-**Quantitative probe.** If the candidate did the cloud-cost bonus, check their numbers against this table; otherwise give the inputs on the whiteboard and expect answers within about 5 minutes. They are hypothetical rates, not quotes; 1 GiB = 1,024 MiB; 30-day month.
+**Interview: cost trade-offs.** Costs are discussed only in the interview (the cloud deployment plan bonus has no calculation). Give these inputs on the whiteboard and expect answers within about 5 minutes. They are hypothetical rates, not quotes; 1 GiB = 1,024 MiB; 30-day month.
 
 | Question | Inputs | Answer |
 |---|---|---|
@@ -98,17 +99,24 @@ Reference: [ci-core-dev.yml](../.github/workflows/ci-core-dev.yml) and [ci-data-
 
 ## Bonus grading
 
-Candidates may attempt **at most three** bonuses. Grade only the first three listed in their EVIDENCE.md and ignore the rest. A bonus never compensates for a broken required task.
+Candidates may attempt **at most three** bonuses, from any category. Grade only the first three listed in their EVIDENCE.md and ignore the rest. A bonus never compensates for a broken required task. Prefer a submission that used an established tool over one that hand-built the same thing.
 
-| Bonus | Good looks like | Red flag |
-|---|---|---|
-| Model handoff | Gate before selection; publish ≠ promote; rollback shown; digest in pipeline results; an established tool (registry, versioned object store, OCI artifacts) | Custom script reimplementing a registry; digest checked only after promotion |
-| Cloud costs | Numbers match the table above; provider minimum-duration rule named; omitted costs listed | Rates × 30 twice; invented transfer prices |
-| Failure recovery | Kill during aggregation, show partial state, retry gives exactly 5 rows and honest MongoDB status; explains the PostgreSQL→MongoDB gap | Only kills during inference, where upserts already make retry trivial |
-| Portable storage + caching | MinIO/S3 via configuration; models selected by digest; cache reuse shown across two runs; incomplete-entry handling | Provider SDK calls in business logic; cache keyed by file name |
-| Dev isolation | Per-developer namespaces/prefixes/DB records; quotas and expiry; A/B table | Ten full copies of the stack |
-| Argo | kind/k3d setup reproducible; preserves image → mask → inference → aggregation order; retries and limits; logs reachable | Workflow that only wraps `run_local.py` in one step |
-| Training platform | Tracking + registry with promotion separate from publication; no proprietary ML APIs in training code | Large platform deployed with no experiment actually tracked |
+| Category | Bonus | Good looks like | Red flag |
+|---|---|---|---|
+| MLOps | Model handoff | Gate before selection; publish ≠ promote; rollback shown; digest in pipeline results; a registry, versioned object store or similar tool | Custom script reimplementing a registry; digest checked only after promotion |
+| MLOps | Training platform | Tracking + registry with promotion separate from publication; no proprietary ML APIs in training code | Large platform deployed with no experiment actually tracked |
+| MLOps | Dataset versioning | Dataset identity recorded with each model; two runs on two data versions traceable both ways | A hash in a filename and nothing linking it to the model |
+| Storage | Portable storage + caching | S3-compatible storage via configuration; models selected by digest; cache reuse across two runs; incomplete-entry handling | Provider SDK calls in business logic; cache keyed by file name |
+| Storage | Failure recovery | Kill during aggregation, show partial state, retry gives exactly 5 rows and honest MongoDB status; explains the PostgreSQL→MongoDB gap | Only kills during inference, where upserts already make retry trivial |
+| Storage | Backup and restore | Real drill: volumes destroyed, restored, verifier passes; measured RPO/RTO; addresses PostgreSQL/MongoDB backup skew | Backup command shown but never restored |
+| Compute | Cloud deployment plan | One-page placement; Spot only for idempotent/checkpointed work; managed DBs; migration with verification and rollback | Generic cloud essay; Spot for the API or databases; vendor ML lock-in |
+| Compute | Argo | Reproducible kind/k3d setup; preserves image → mask → inference → aggregation order; retries and limits; logs reachable | Workflow that only wraps `run_local.py` in one step |
+| Compute | Kubernetes autoscaling | Workers scale on queue depth to zero and back; requests/limits; probes; shown under a burst | CPU-based HPA on an I/O-bound queue consumer; never shows scale-to-zero |
+| Compute | Right-size analysis | Captures the real peak (cgroup or equivalent, not scrape); before/after numbers; identical outputs; production extrapolation | Sizes from a dashboard that missed the peak (reference: 5 MiB scraped vs 254 MiB real) |
+| Development | Dev isolation | Per-developer namespaces/prefixes/DB records; quotas and expiry; A/B table | Ten full copies of the stack |
+| Development | Supply-chain security | Image + IaC scan, SBOM artifact, digest-pinned base, justified severity gate, recorded exceptions | Scanner runs with `exit-code 0`; everything ignored |
+| Development | Schema migrations | Migration tool, one-shot migrate step before services, upgrade + rollback with data preserved, runs in CI | Migrations that drop and recreate the table |
+| Own idea | Candidate-proposed | Real problem in *this* system, change implemented, before/after evidence, honest limitation | Generic boilerplate (badges, linters with no findings) or an untested proposal |
 
 ## Interview questions
 
