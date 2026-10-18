@@ -1,6 +1,6 @@
 # Implement the model handoff
 
-**Bonus task** · [Assignment](../../README.md) · also a required interview discussion topic
+**Bonus task — MLOps** · [Assignment](../../README.md) · also a required interview discussion topic
 
 ## Goal
 
