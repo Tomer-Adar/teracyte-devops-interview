@@ -1,6 +1,6 @@
 # Supplied notebook-to-model example
 
-[Required team-support task](../../tasks/support-teams/README.md)
+[Assignment](../../README.md) · required interview discussion topic: model handoff
 
 This fixture supplies the ML algorithm so your work can focus on infrastructure. It trains a tiny linear regression on synthetic data using the existing NumPy dependency. No GPU, cloud account or new ML framework is needed.
 
@@ -40,14 +40,12 @@ The evaluation report identifies the dataset/seed and row counts. It compares th
 | Prediction output | Numeric vector of shape (n,), one scalar prediction per row |
 | Evaluation input | Features plus a finite target vector of shape (n,), with n > 0 |
 
-The format is a schema identifier, not a model release version. Add release identity, artifact location, digest and evaluation references in your own handoff metadata.
+The format is a schema identifier, not a model release version. A release would add its own identity, artifact location, digest and evaluation references.
 
-## Candidate work
+## Interview discussion
 
-The fixture does not publish artifacts, compare release candidates against an approval threshold, choose production versions, verify release digests or roll back a release. Implement the small local handoff required by the task; a local directory and metadata files are enough.
+The fixture does not publish artifacts, compare release candidates against an approval threshold, choose production versions, verify release digests or roll back a release. **You do not need to implement any of this.** Be ready to discuss in the interview how you would do it, and with which tools: where artifacts live, how versions and digests are recorded, what gate a candidate must pass before it can be selected, how Dev's analysis picks a version, and how to roll back.
 
-The existing image-inference step reads any nonempty artifact and records its SHA-256, but it computes mask-based mock metrics without evaluating these regression weights. You may use the supplied JSON artifact with that step to prove artifact selection and digest propagation. Use the supplied evaluation/loader helpers separately to demonstrate the toy model's quality and input/output compatibility.
-
-Do not claim that a successful image-pipeline run validates this model's production accuracy. No change to the camera-image algorithm is required.
+The existing image-inference step reads any nonempty artifact and records its SHA-256, but it computes mask-based mock metrics without evaluating these regression weights. Do not claim that a successful image-pipeline run validates this model's production accuracy. No change to the camera-image algorithm is required.
 
 Outputs belong under ignored data/. Rerunning the same output directory overwrites scratch training outputs; use separate directories if you want to retain experiments.

@@ -4,7 +4,7 @@
 
 ## Goal
 
-Give Dev a repeatable runtime for its application and production analysis. Data/ML's training-to-model handoff is covered by the linked team-support task.
+Give Dev a repeatable runtime for its application and production analysis.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ Give Dev a repeatable runtime for its application and production analysis. Data/
 
 Use requirements-local.txt and the commands in the starter guide. Inside containers, localhost refers to that container; use service names for dependencies. Share the required data paths between the runner, API and worker and ensure they are writable.
 
-Keep model selection compatible with the [team-delivery task](../support-teams/README.md).
+Select the model artifact through configuration (the inference step already accepts `--model-path`), so a different model can be used without rebuilding the image. How models are delivered is an interview discussion topic.
 
 ## How to demonstrate it
 

@@ -22,7 +22,7 @@ An intentionally wrong expected digest is enough for the failing demonstration. 
 
 ## How to demonstrate it
 
-Include a successful five-image run with duration and a failing verification with its nonzero exit status in EVIDENCE.md. The [CI workflows](../support-teams/README.md) must reuse these commands.
+Include a successful five-image run with duration and a failing verification with its nonzero exit status in EVIDENCE.md. Write it so a CI job could run the same command unchanged.
 
 ## Optional improvements
 
