@@ -1,6 +1,6 @@
 # Demonstrate failure recovery
 
-**Bonus task** · [Assignment](../../README.md)
+**Bonus task — Storage** · [Assignment](../../README.md)
 
 ## Goal
 

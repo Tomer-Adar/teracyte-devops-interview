@@ -8,7 +8,7 @@ Let Dev and DevOps see whether the system is healthy, where resources go and whe
 
 ## Requirements
 
-- Add a metrics and dashboard stack to Compose. Prometheus and Grafana are a common choice; an equivalent of your choice is fine.
+- Add a metrics, dashboard and alerting stack of your choice to Compose.
 - Collect at least:
   - API availability and response time
   - broker queue depth and worker health

@@ -1,6 +1,6 @@
 # Implement a portable training and promotion platform
 
-**Bonus task** · [Assignment](../../README.md) · [Model handoff bonus](../model-handoff/README.md)
+**Bonus task — MLOps** · [Assignment](../../README.md) · [Model handoff bonus](../model-handoff/README.md)
 
 ## Goal
 
@@ -16,7 +16,7 @@ If you choose this task:
 
 ## Suggested starting point
 
-Extend the supplied example and, if you did it, the model handoff bonus. Choose an open-source tracking/registry system or a small standards-based approach and justify it. Reuse existing databases/storage where appropriate rather than deploying a large platform for its own sake.
+Extend the supplied example and, if you did it, the model handoff bonus. Use an established tracking and registry tool rather than building one, and justify your choice. Reuse existing databases/storage where appropriate rather than deploying a large platform for its own sake.
 
 Show how a notebook user submits a job and retrieves results without embedding credentials. Document runtime, data and artifact interfaces so the same job can move between cloud and on-prem compute. A dedicated serving API is optional; production analysis can load a published artifact.
 

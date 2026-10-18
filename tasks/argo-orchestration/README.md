@@ -1,6 +1,6 @@
 # Add Argo as the analysis workflow orchestrator
 
-**Bonus task** · [Assignment](../../README.md)
+**Bonus task — Compute** · [Assignment](../../README.md)
 
 ## Goal
 

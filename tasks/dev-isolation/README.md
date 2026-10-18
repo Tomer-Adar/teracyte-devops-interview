@@ -1,6 +1,6 @@
 # Isolate shared development environments
 
-**Bonus task** · [Assignment](../../README.md)
+**Bonus task — Development** · [Assignment](../../README.md)
 
 ## Goal
 
