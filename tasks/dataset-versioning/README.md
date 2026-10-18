@@ -1,23 +1,37 @@
 # Version datasets and link them to models
 
-**Bonus task — MLOps** · [Assignment](../../README.md)
+**Bonus task — MLOps** · [Assignment](../../README.md) · Time guide: ~1.5–2 h
 
 ## Goal
 
-Answer "which data was this model trained on?" for any model, and make retraining on changed data produce a new, traceable model version.
+For any trained model, answer "which exact data was this trained on?" When the data changes, retraining must produce a new model that traces back to the new data.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Versioned dataset(s) and the tool configuration | Your repository; data files themselves stay out of Git |
+| Demonstration | EVIDENCE.md, section "Bonus: dataset versioning" |
 
 ## Requirements
 
-If you choose this task:
-- Give the training dataset an identity: a version or content hash that changes when the data changes.
-- Record that identity with every trained model, alongside the code version and evaluation results.
-- Show that changing the data produces a new model version that is traceable back to the new dataset, while the old model still points at the old data.
-- Prefer an established data-versioning or experiment-tracking tool over a hand-rolled scheme, and say why you chose it.
+1. Use an established data-versioning or experiment-tracking tool. No hand-rolled hashing scheme.
+2. Save the training dataset to files (it is generated in memory today by `make_dataset()` in [train.py](../../examples/model_lifecycle/train.py)), and train from those files.
+3. Each dataset version must have an identity that changes whenever the data changes.
+4. Each trained model must record the identity of the dataset it was trained on.
+5. One documented command must show, for a given model, its dataset version. Another must show, for a given dataset version, the models trained on it.
 
-## Suggested starting point
+## Done when
 
-The supplied training example generates synthetic data from a fixed seed (`make_dataset()` in [train.py](../../examples/model_lifecycle/train.py)). Persist that dataset as a file first; a changed seed or row count is enough to create a second version.
+- [ ] Two dataset versions exist, for example produced with different seeds.
+- [ ] One model is trained on each.
+- [ ] The commands from requirement 5 show model 1 → dataset 1 and model 2 → dataset 2.
+- [ ] The dataset files are not committed to Git.
 
-## How to demonstrate it
+## Evidence to include in EVIDENCE.md
 
-Two training runs on two dataset versions, and the command that shows which dataset each resulting model came from.
+- The commands and outputs for creating both versions, training both models, and both lookups.
+
+## Not required
+
+- Large or real datasets, data-quality checks, or remote storage. Local storage is enough.

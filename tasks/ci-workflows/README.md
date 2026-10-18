@@ -1,36 +1,95 @@
 # Add CI workflows for both teams
 
-**Required task** · [Assignment](../../README.md)
+**Required task** · [Assignment](../../README.md) · Time guide: ~1.5–2 h
 
 ## Goal
 
-Dev owns the API, Celery and production analysis steps. Data/ML owns the notebook, training and evaluation assets under `examples/model_lifecycle`. Give each team a delivery path that runs only what its change needs, and fails loudly when something breaks.
+Two teams change this repository: **Dev** changes the API, worker, analysis steps and infrastructure, and **Data/ML** changes the training code in `examples/model_lifecycle/`. Each team needs its own GitHub Actions workflow. It must run automatically on the right changes, check what that team owns, and fail loudly when something is wrong.
+
+## Deliverables
+
+| What | Where |
+|---|---|
+| Dev workflow | `.github/workflows/ci-core-dev.yml` |
+| Data/ML workflow | `.github/workflows/ci-data-ml.yml` |
+| Run links or output, and the trigger table | EVIDENCE.md, section "CI" |
 
 ## Requirements
 
-- Add `ci-core-dev.yml` and `ci-data-ml.yml` under `.github/workflows` with the ownership below.
-- Reuse the same commands you documented locally (Compose, the verifier, Terraform); don't write a second, CI-only way of running things.
-- Propagate failures: a failing test, verification or check must fail the job. Retain useful logs (for example, Compose logs and verifier output as workflow artifacts) when a job fails.
-- No cloud credentials, `terraform apply` or deployment are required.
+### Both workflows
+1. Each must run on `pull_request`, and on `push` to the `main` branch, **only** when a file in its path list (below) changes.
+2. Steps that also exist locally (tests, Compose, the verifier, Terraform) must use the same commands you documented for local use. The CI-only steps, the evaluation gate and the digest file in requirement 9, must be listed in EVIDENCE.md as commands that can also be run locally.
+3. Any failing command must fail the job. That includes a command piped into another one, such as `cmd | tee log`.
+4. Each must declare `permissions: contents: read` and use no cloud credentials or secrets.
 
-| Change | Delivery path |
-|---|---|
-| API, Celery or production analysis step | Dev workflow: build, tests and the [end-to-end verification](../verify-experiment/README.md) against real databases |
-| Terraform storage configuration | Dev workflow: `fmt -check`, `init -backend=false`, `validate` |
-| Monitoring configuration | Dev workflow: validate the config and rules with the monitoring tool's own checker |
-| Notebook, training or evaluation assets | Data/ML workflow: train, evaluate, apply an evaluation threshold and keep the candidate model and its evaluation as a workflow artifact. It must not rebuild the API image or select the model for production |
-| Shared dependencies or runtime | Both workflows |
+### `ci-core-dev.yml`: Dev
+5. **Triggers on changes to:**
+   - `services/**`, `pipelines/**`, `scripts/**`, `tests/**`, `infra/**`. `tests/**` includes `tests/test_model_lifecycle.py`; that overlap with the Data/ML workflow is intended, because the `unit` job runs every test.
+   - your monitoring configuration directory
+   - `Dockerfile` (and any other Dockerfiles), `.dockerignore`, `compose*.yaml`
+   - `**/requirements*.txt` (every requirements file, at any depth)
+   - `.github/workflows/ci-core-dev.yml`
+6. **Must contain these four jobs:**
 
-## Suggested starting point
+   | Job | What it runs | Passes when |
+   |---|---|---|
+   | `unit` | `python -m pytest -q` | All tests pass |
+   | `e2e` | Build and start the stack with Compose, then run your [verify command](../verify-experiment/README.md) | The verifier prints `PASS` and exits 0 |
+   | `terraform` | In `infra/`: `terraform fmt -check -recursive`, `terraform init -backend=false`, `terraform validate` | All three exit 0 |
+   | `monitoring-config` | Your monitoring tool's own config and alert-rule checker on your monitoring files. If your tool has no checker: start the monitoring service in the job and query its API to confirm the alert rule loaded. Either way, check that the dashboard file is valid syntax (for example valid JSON) | All checks exit 0 |
 
-Path filters decide which workflow runs. Decide explicitly which files are shared. One shared Dockerfile is fine.
+7. The `e2e` job must upload the Compose logs and the verifier output as a workflow artifact **even when the job fails**.
 
-Use the supplied training CLI (`python -m examples.model_lifecycle.train`); do not invent an ML algorithm. Its `evaluation.json` already contains the test error and a baseline to gate on.
+### `ci-data-ml.yml`: Data/ML
+8. **Triggers on changes to:**
+   - `examples/model_lifecycle/**`
+   - `tests/test_model_lifecycle.py`
+   - `**/requirements*.txt` (every requirements file, at any depth; `requirements-local.txt` includes the nested ones)
+   - `.github/workflows/ci-data-ml.yml`
 
-## How to demonstrate it
+   It must also be startable by hand (`workflow_dispatch`).
+9. **Must run these steps in this order:**
+   1. Install the Python dependencies from `requirements-local.txt`.
+   2. Run `python -m pytest -q tests/test_model_lifecycle.py`.
+   3. Train: `python -m examples.model_lifecycle.train --output-dir candidate`. This writes `candidate/model.json` and `candidate/evaluation.json`.
+   4. **Evaluation gate:** fail the job if, in `candidate/evaluation.json`, `test_mse` is greater than `0.001`, or `test_mse` is not lower than `baseline_test_mse`.
+   5. Write the SHA-256 digest of `candidate/model.json` to `candidate/model.json.sha256`.
+   6. Upload `candidate/` as a workflow artifact named `model-candidate-<commit SHA>`.
+10. It must **not** build Docker images, start the Compose stack, or change which model production analysis uses.
 
-Push to a fork and include the workflow run output, including one run where a check fails. If repository permissions prevent Actions from running, include the workflow files, the equivalent local output and the limitation. Show which workflow runs for an API change, a training-only change and a shared change.
+### Shared changes
+11. A change to any requirements file must trigger **both** workflows. The `**/requirements*.txt` path in requirements 5 and 8 ensures this.
 
-## Optional improvements
+## Done when
 
-Lint the workflows (for example with actionlint), cache dependencies, publish immutable images, or add a manually triggered workflow for model-only candidates.
+- [ ] Changing a file in `services/` runs only `ci-core-dev`, and all four of its jobs pass.
+- [ ] Changing a file in `examples/model_lifecycle/` runs only `ci-data-ml`, it passes, and the `model-candidate-<SHA>` artifact contains `model.json`, `evaluation.json` and `model.json.sha256`.
+- [ ] Changing `requirements-local.txt` runs both workflows.
+- [ ] Lowering the gate threshold from `0.001` to `0.0001` makes `ci-data-ml` fail at the gate step (the supplied model's `test_mse` is about `0.00011`).
+- [ ] A failing `e2e` run still uploads its logs artifact.
+
+## Evidence to include in EVIDENCE.md
+
+- Links to one passing run of each workflow, from a fork or your own copy of the repository.
+- A link to one deliberately failing `ci-data-ml` run (the lowered gate threshold), with the failing step named.
+- A link to one deliberately failing `e2e` run (for example `EXPECTED_MODEL_SHA256` set to a wrong value on a test branch), showing that the logs artifact was still uploaded.
+- The gate and digest commands from requirement 9, written so they run locally.
+- This table, filled in from real runs:
+
+  | Changed file | `ci-core-dev` ran? | `ci-data-ml` ran? |
+  |---|---|---|
+  | a file in `services/` | | |
+  | a file in `examples/model_lifecycle/` | | |
+  | `requirements-local.txt` | | |
+
+- **If you cannot run GitHub Actions:** say why, and paste the same commands run locally with their output.
+
+## Not required
+
+- Deploying anything, pushing images to a registry, or publishing/promoting models (that is the [model handoff bonus](../model-handoff/README.md)).
+- Branch protection rules, caching or matrix builds.
+
+## Hints (not graded)
+
+- Test requirement 3 with a deliberately failing piped command.
+- A command-line JSON tool is enough for the evaluation gate; no extra Python is needed.
